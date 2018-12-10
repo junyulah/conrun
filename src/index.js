@@ -1,6 +1,9 @@
 const spawnp = require('spawnp');
 const log = console.log.bind(console); // eslint-disable-line
 const chalk = require('chalk');
+const {
+  retry
+} = require('./util');
 
 /**
  * 1. run commands concurrently
@@ -9,7 +12,8 @@ const chalk = require('chalk');
  * command = {
  *  name: '',
  *  command: [], // used to spawn
- *  options: {}
+ *  options: {},
+ *  retry: 0
  * }
  *
  * command result = {
@@ -18,9 +22,11 @@ const chalk = require('chalk');
  * }
  */
 const runCommands = (commands) => {
+  const t1 = new Date().getTime();
+
   return Promise.all(
     commands.map((command, index) => {
-      return spawnCmd(command, pickColor(index)).then(() => {
+      return retry(spawnCmd, command.retry || 0)(command, pickColor(index)).then(() => {
         return {
           type: 'success'
         };
@@ -32,7 +38,9 @@ const runCommands = (commands) => {
       });
     })
   ).then((stats) => {
-    log(chalk.blue('[stats of command results]'));
+    const t2 = new Date().getTime();
+    log('-------------------------------------------------');
+    log(chalk.blue(`[stats of command results] total time: ${t2 - t1}ms`));
     stats.forEach(({
       type,
       errMsg
@@ -40,8 +48,10 @@ const runCommands = (commands) => {
       const {
         name = '', command
       } = commands[index];
-      const title = chalk[pickColor(index)](`${index}.[${name}]`);
-      const content = type === 'success' ? chalk.green(command.join(' ')) : chalk.red(`${command.join(' ')}, ${errMsg}`);
+      const cwsymbol = type === 'success' ? chalk.green('✔') : chalk.red('✘');
+      const title = chalk[pickColor(index)](`${cwsymbol} ${index}.[${name}]`);
+      const cmdStr = `${command.join(' ')}`;
+      const content = type === 'success' ? chalk.green(`${cmdStr}`) : chalk.red(`${cmdStr}, ${errMsg}`);
       log(`${title} ${content}`);
     });
   });
@@ -69,7 +79,7 @@ const spawnCmd = ({
   });
 };
 
-const colors = ['blue', 'yellow', 'green', 'cyan', 'white'];
+const colors = ['blue', 'yellow', 'cyan', 'white', 'magenta', 'gray'];
 const pickColor = (index) => {
   return colors[index % colors.length];
 };
