@@ -1,0 +1,31 @@
+{
+  "name": "conrun",
+  "version": "0.0.1",
+  "description": "concurrent run commands help tool",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test/**/*.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/idata-shopee/conrun.git"
+  },
+  "keywords": [
+    "concurrent",
+    "run",
+    "commands"
+  ],
+  "author": "ddchen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/idata-shopee/conrun/issues"
+  },
+  "homepage": "https://github.com/idata-shopee/conrun#readme",
+  "devDependencies": {
+    "mocha": "^5.2.0"
+  },
+  "dependencies": {
+    "chalk": "^2.4.1",
+    "spawnp": "^0.1.2"
+  }
+}
