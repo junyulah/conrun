@@ -1,0 +1,13 @@
+#!/usr/bin/env node
+
+const {runCommands} = require('..');
+const yargs = require('yargs');
+
+yargs.usage(`Usage: conrun
+  --command: "{\\"command\\": [\\"ls\\"], \\"options\\": {}}"
+`);
+
+const {argv} = yargs;
+
+const commands = Array.isArray(argv.command)? argv.command: (argv.command? [argv.command]: []);
+runCommands(commands.map((command) => JSON.parse(command)));

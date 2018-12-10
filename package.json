@@ -6,6 +6,9 @@
   "scripts": {
     "test": "mocha test/**/*.js"
   },
+  "bin": {
+    "conrun": "./bin/conrun"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/idata-shopee/conrun.git"
@@ -26,6 +29,7 @@
   },
   "dependencies": {
     "chalk": "^2.4.1",
-    "spawnp": "^0.1.2"
+    "spawnp": "^0.1.2",
+    "yargs": "^12.0.5"
   }
 }
