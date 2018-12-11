@@ -22,11 +22,13 @@ const {
  * }
  */
 const runCommands = (commands, {
-  onlys
+  onlys = []
 } = {}) => {
+  const _onlys = onlys.map((item) => item.trim()).filter((item) => item !== '');
+
   return runCommandsHelp(commands.filter((command) => {
-    if (onlys) {
-      return onlys.find((only) => new RegExp(only).test(command.name));
+    if (_onlys && _onlys.length) {
+      return _onlys.find((only) => new RegExp(only).test(command.name));
     } else {
       return true;
     }
