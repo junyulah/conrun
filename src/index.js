@@ -21,7 +21,19 @@ const {
  *   errMsg: String
  * }
  */
-const runCommands = (commands) => {
+const runCommands = (commands, {
+  onlys
+} = {}) => {
+  return runCommandsHelp(commands.filter((command) => {
+    if (onlys) {
+      return onlys.find((only) => new RegExp(only).test(command.name));
+    } else {
+      return true;
+    }
+  }));
+};
+
+const runCommandsHelp = (commands) => {
   const t1 = new Date().getTime();
 
   return Promise.all(
