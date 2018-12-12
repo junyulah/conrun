@@ -82,12 +82,12 @@ const spawnCmd = ({
     onChild: (child) => {
       // stdout
       child.stdout && child.stdout.on('data', (chunk) => {
-        log(`[${chalk[color](name)}] ${chunk.toString()}`);
+        process.stdout.write(`[${chalk[color](name)}] ${chunk.toString()}`);
       });
 
       // std err
       child.stderr && child.stderr.on('data', (chunk) => {
-        log(`[${chalk[color](name)}] ${chalk.red(chunk.toString())}`);
+        process.stderr.write(`[${chalk[color](name)}] ${chalk.red(chunk.toString())}`);
       });
     }
   });
