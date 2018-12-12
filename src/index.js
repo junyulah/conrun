@@ -71,6 +71,7 @@ const runCommandsHelp = (commands) => {
   });
 };
 
+const emptyPrefix = '  ';
 // eg: command = ['echo', '123', '456']
 const spawnCmd = ({
   name = '',
@@ -82,12 +83,24 @@ const spawnCmd = ({
     onChild: (child) => {
       // stdout
       child.stdout && child.stdout.on('data', (chunk) => {
-        process.stdout.write(`[${chalk[color](name)}] ${chunk.toString()}`);
+        const prefix = `[${chalk[color](name)}] `;
+        const text = `${prefix}${chunk.toString()}`;
+        const lines = text.split('\n');
+        process.stdout.write(lines[0]);
+        lines.slice(1).forEach((line) => {
+          process.stdout.write(`${emptyPrefix}${line}\n`);
+        });
       });
 
       // std err
       child.stderr && child.stderr.on('data', (chunk) => {
-        process.stderr.write(`[${chalk[color](name)}] ${chalk.red(chunk.toString())}`);
+        const prefix = `[${chalk[color](name)}] `;
+        const text = `${prefix}${chalk.red(chunk.toString())}`;
+        const lines = text.split('\n');
+        process.stderr.write(lines[0]);
+        lines.slice(1).forEach((line) => {
+          process.stderr.write(`${emptyPrefix}${line}\n`);
+        });
       });
     }
   });
