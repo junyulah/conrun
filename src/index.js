@@ -86,7 +86,7 @@ const spawnCmd = ({
         const prefix = `[${chalk[color](name)}] `;
         const text = `${prefix}${chunk.toString()}`;
         const lines = text.split('\n');
-        process.stdout.write(lines[0]);
+        process.stdout.write(lines[0] + '\n');
         lines.slice(1).forEach((line) => {
           process.stdout.write(`${emptyPrefix}${line}\n`);
         });
@@ -97,7 +97,7 @@ const spawnCmd = ({
         const prefix = `[${chalk[color](name)}] `;
         const text = `${prefix}${chalk.red(chunk.toString())}`;
         const lines = text.split('\n');
-        process.stderr.write(lines[0]);
+        process.stderr.write(lines[0] + '\n');
         lines.slice(1).forEach((line) => {
           process.stderr.write(`${emptyPrefix}${line}\n`);
         });
