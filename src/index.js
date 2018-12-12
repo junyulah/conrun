@@ -85,7 +85,10 @@ const spawnCmd = ({
       child.stdout && child.stdout.on('data', (chunk) => {
         const prefix = `[${chalk[color](name)}] `;
         const text = `${prefix}${chunk.toString()}`;
-        const lines = text.split('\n');
+        let lines = text.split('\n');
+        if (lines[lines.length - 1] === '') {
+          lines.pop();
+        }
         process.stdout.write(lines[0] + '\n');
         lines.slice(1).forEach((line) => {
           process.stdout.write(`${emptyPrefix}${line}\n`);
@@ -95,11 +98,14 @@ const spawnCmd = ({
       // std err
       child.stderr && child.stderr.on('data', (chunk) => {
         const prefix = `[${chalk[color](name)}] `;
-        const text = `${prefix}${chalk.red(chunk.toString())}`;
-        const lines = text.split('\n');
-        process.stderr.write(lines[0] + '\n');
+        const text = chunk.toString();
+        let lines = text.split('\n');
+        if (lines[lines.length - 1] === '') {
+          lines.pop();
+        }
+        process.stderr.write(`${prefix}${chalk.red(lines[0])}\n`);
         lines.slice(1).forEach((line) => {
-          process.stderr.write(`${emptyPrefix}${line}\n`);
+          process.stderr.write(`${emptyPrefix}${chalk.red(line)}\n`);
         });
       });
     }
