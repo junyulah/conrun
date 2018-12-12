@@ -58,7 +58,8 @@ describe('index', () => {
       command: ['ls', 'abdeiufdjdoi'],
       retry: 3
     }], {
-      onlys: [' ']
+      onlys: [' '],
+      sequence: true
     });
   });
 });

@@ -6,6 +6,7 @@ const yargs = require('yargs');
 yargs.usage(`Usage: conrun
   --command: "{\\"command\\": [\\"ls\\"], \\"options\\": {}}"
   --only: only run command
+  --sequence
 `);
 
 const {argv} = yargs;
@@ -15,5 +16,5 @@ const onlys = Array.isArray(argv.only)? argv.only: (argv.only? [argv.only]: []);
 
 runCommands(
   commands.map((command) => JSON.parse(command)),
-  {onlys}
+  {onlys, sequence: argv.sequence}
 );

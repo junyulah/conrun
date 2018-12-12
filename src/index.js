@@ -22,7 +22,8 @@ const {
  * }
  */
 const runCommands = (commands, {
-  onlys = []
+  onlys = [],
+  sequence = false
 } = {}) => {
   const _onlys = onlys.map((item) => item.trim()).filter((item) => item !== '');
 
@@ -32,26 +33,41 @@ const runCommands = (commands, {
     } else {
       return true;
     }
-  }));
+  }), sequence);
 };
 
-const runCommandsHelp = (commands) => {
+const runCommandsHelp = (commands, sequence) => {
   const t1 = new Date().getTime();
 
-  return Promise.all(
-    commands.map((command, index) => {
-      return retry(spawnCmd, command.retry || 0)(command, pickColor(index)).then(() => {
-        return {
-          type: 'success'
-        };
-      }).catch((err) => {
-        return {
-          type: 'fail',
-          errMsg: err.stderrs.join('') || err.message
-        };
+  const commandHandler = (command, index) => {
+    return retry(spawnCmd, command.retry || 0)(command, pickColor(index)).then(() => {
+      return {
+        type: 'success'
+      };
+    }).catch((err) => {
+      return {
+        type: 'fail',
+        errMsg: err.stderrs.join('') || err.message
+      };
+    });
+  };
+
+  const runSequence = () => {
+    return commands.reduce((prev, command, index) => {
+      return prev.then((rets) => {
+        return commandHandler(command, index).then((ret) => {
+          rets.push(ret);
+          return rets;
+        });
       });
-    })
-  ).then((stats) => {
+    }, Promise.resolve([]));
+  };
+
+  const runConcurrent = () => {
+    return Promise.all(commands.map(commandHandler));
+  };
+
+  return (sequence ? runSequence() : runConcurrent()).then((stats) => {
     const t2 = new Date().getTime();
     log('-------------------------------------------------');
     log(chalk.blue(`[stats of command results] total time: ${t2 - t1}ms`));
