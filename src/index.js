@@ -1,11 +1,15 @@
 const {
   spawn
 } = require('child_process');
+const {
+  commandStatus
+} = require('./statusInfo');
 const chalk = require('chalk');
 const {
   retry,
   runSequence
 } = require('./util');
+const interactiveCmdMap = require('./interactiveCmdMap');
 const Window = require('./window');
 
 const DefaultIO = () => {
@@ -16,25 +20,6 @@ const DefaultIO = () => {
 };
 
 const emptyPrefix = '  ';
-
-const getCommandStatusInfo = ({
-  name,
-  command,
-  status,
-  errMsg
-}, index) => {
-  const cwsymbol = status === 'success' ? chalk.green('✔') : (
-    status === 'fail' ? chalk.red('✘') : (
-      status === 'running' ? chalk.white('➤') : chalk.white('⟳'))
-  );
-
-  const title = chalk[pickColor(index)](`${cwsymbol} ${index}.[${name}]`);
-  const cmdStr = `${command.join(' ')}`;
-  const content = status === 'success' ? chalk.green(`${cmdStr}`) : (
-    status === 'fail' ? chalk.red(`${cmdStr}, ${errMsg}`) : chalk.white(cmdStr)
-  );
-  return `${title} ${content}`;
-};
 
 /**
  * 1. run commands concurrently
@@ -52,12 +37,12 @@ const getCommandStatusInfo = ({
  *   errMsg: String
  * }
  */
-const runCommands = (sourceCommands, {
+const commandsManager = (sourceCommands, {
   onlys = [],
   sequence = false,
   interactive = false,
   windowSize
-} = {}) => {
+} = {}, commandMap) => {
   const _onlys = onlys.map((item) => item.trim()).filter((item) => item !== '');
 
   const commands = sourceCommands.filter((command) => {
@@ -86,7 +71,12 @@ const runCommands = (sourceCommands, {
     executeCmd: (cmd) => {
       const args = cmd.split(' ').map(item => item.trim()).filter(item => !!item);
       if (commandMap[args[0]]) {
-        return commandMap[args[0]](...args.slice(1));
+        return commandMap[args[0]]({
+          getCommand,
+          getCommandStatusInfo,
+          getCommandsStatusInfo,
+          runCommand
+        }, ...args.slice(1));
       } else {
         return `error: command ${cmd} is not supported.`;
       }
@@ -95,38 +85,6 @@ const runCommands = (sourceCommands, {
 
   const log = (text) => {
     logStdText(text + '\n');
-  };
-
-  const commandMap = {
-    'help': () => `conrun commands:
-    clear:  clear comand log
-    list:   show current command status
-    run:    run a command (only when the command is not running)
-    stop:   stop a running command
-`,
-    'clear': () => '',
-    'list': () => getCommandsStatusInfo().join('\n'),
-    'run': (idx) => {
-      const command = commands[Number(idx)];
-      if (command.status === 'running') {
-        return 'command is running';
-      } else {
-        runCommand(command, idx);
-        return 'start to run command\n' + getCommandStatusInfo(command, idx);
-      }
-    },
-    'stop': (idx) => {
-      const command = commands[Number(idx)];
-      if (command) {
-        if (command.status !== 'running') {
-          return 'command is not running';
-        } else {
-          process.kill(command.pid);
-        }
-      } else {
-        return 'no such command to kill';
-      }
-    }
   };
 
   // eg: command = ['echo', '123', '456']
@@ -172,7 +130,10 @@ const runCommands = (sourceCommands, {
     });
   };
 
-  const runCommand = (command, index) => {
+  const getCommand = (index) => commands[index];
+
+  const runCommand = (index) => {
+    const command = getCommand(index);
     command.status = 'running';
 
     return retry(spawnCmd, command.retry || 0)(command, pickColor(index), {
@@ -185,16 +146,20 @@ const runCommands = (sourceCommands, {
     });
   };
 
-  const getCommandsStatusInfo = () => {
-    return commands.map(getCommandStatusInfo);
+  const getCommandStatusInfo = (index) => {
+    return commandStatus(getCommand(index), pickColor(index), index);
   };
 
-  const runCommandsHelp = (sequence) => {
+  const getCommandsStatusInfo = () => {
+    return commands.map((_, index) => getCommandStatusInfo(index));
+  };
+
+  const start = () => {
     const t1 = new Date().getTime();
 
     return (sequence ?
-      runSequence(commands.map((command, index) => () => runCommand(command, index))) :
-      Promise.all(commands.map(runCommand))
+      runSequence(commands.map((command, index) => () => runCommand(index))) :
+      Promise.all(commands.map((_, index) => runCommand(index)))
     ).then(() => {
       if (!interactive) {
         const t2 = new Date().getTime();
@@ -205,7 +170,9 @@ const runCommands = (sourceCommands, {
     });
   };
 
-  return runCommandsHelp(sequence);
+  return {
+    start
+  };
 };
 
 const chunkToLines = (chunk, prefix, color) => {
@@ -234,5 +201,8 @@ const pickColor = (index) => {
 };
 
 module.exports = {
-  runCommands
+  runCommands: (commands, options) => {
+    const cm = commandsManager(commands, options, interactiveCmdMap);
+    return cm.start();
+  }
 };
