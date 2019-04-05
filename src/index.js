@@ -75,7 +75,8 @@ const commandsManager = (sourceCommands, {
           getCommand,
           getCommandStatusInfo,
           getCommandsStatusInfo,
-          runCommand
+          runCommand,
+          stopCommand
         }, ...args.slice(1));
       } else {
         return `error: command ${cmd} is not supported.`;
@@ -154,8 +155,21 @@ const commandsManager = (sourceCommands, {
     return commands.map((_, index) => getCommandStatusInfo(index));
   };
 
+  const stopCommand = (idx) => {
+    const command = getCommand(idx);
+    if (command.status === 'running') {
+      process.kill(command.pid, command.killSignal || 'SIGTERM');
+    }
+  };
+
   const start = () => {
     const t1 = new Date().getTime();
+
+    process.on('exit', () => {
+      commands.forEach((_, idx) => {
+        stopCommand(idx);
+      });
+    });
 
     return (sequence ?
       runSequence(commands.map((command, index) => () => runCommand(index))) :

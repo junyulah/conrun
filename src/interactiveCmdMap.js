@@ -30,14 +30,15 @@ module.exports = {
   },
 
   'stop': ({
-    getCommand
+    getCommand,
+    stopCommand
   }, idx) => {
     const command = getCommand(Number(idx));
     if (command) {
       if (command.status !== 'running') {
         return 'command is not running';
       } else {
-        process.kill(command.pid);
+        stopCommand(idx);
       }
     } else {
       return 'no such command to kill';
