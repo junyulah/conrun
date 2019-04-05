@@ -182,9 +182,6 @@ const runCommands = (sourceCommands, {
       command.status = 'success';
     }).catch(() => {
       command.status = 'fail';
-    }).then(() => {
-      command.errMsg = '';
-      command.pid = '';
     });
   };
 
