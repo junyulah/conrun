@@ -37,6 +37,12 @@ const emptyPrefix = '  ';
  *   errMsg: String
  * }
  */
+const mergeCmdOptions = (options = {}) => {
+  const opts = Object.assign({}, options);
+  opts.env = Object.assign({}, process.env, options.env);
+  return opts;
+};
+
 const commandsManager = (sourceCommands, {
   onlys = [],
   sequence = false,
@@ -55,7 +61,7 @@ const commandsManager = (sourceCommands, {
     return {
       name: cmd.name || `conrun-${index}`,
       command: cmd.command,
-      options: cmd.options,
+      options: mergeCmdOptions(cmd.options),
       retry: cmd.retry,
       status: 'wait',
       errMsg: '',
@@ -103,8 +109,8 @@ const commandsManager = (sourceCommands, {
       command.pid = child.pid;
 
       child.on('error', (err) => {
-        logErrText(chunkToLines(err.message(), prefix, 'red').join(''));
-        command.errMsg += err.message();
+        logErrText(chunkToLines(err.toString(), prefix, 'red').join(''));
+        command.errMsg += err.toString();
         reject(err);
       });
 
