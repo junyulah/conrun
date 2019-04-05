@@ -53,6 +53,7 @@ const commandsManager = (sourceCommands, {
     return {
       name: cmd.name || `conrun-${index}`,
       command: cmd.command,
+      killSignal: cmd.killSignal,
       options: mergeCmdOptions(cmd.options),
       retry: cmd.retry,
       status: 'wait',
@@ -98,6 +99,7 @@ const commandsManager = (sourceCommands, {
 
     return new Promise((resolve, reject) => {
       const child = spawn(command.command[0], command.command.slice(1), command.options);
+      command.process = child;
       command.pid = child.pid;
 
       child.on('error', (err) => {
@@ -156,7 +158,13 @@ const commandsManager = (sourceCommands, {
   const stopCommand = (idx) => {
     const command = getCommand(idx);
     if (command.status === 'running') {
-      process.kill(command.pid, command.killSignal || 'SIGTERM');
+      try {
+        command.process.stdout.destroy();
+        command.process.stderr.destroy();
+        process.kill(command.pid, command.killSignal || 'SIGTERM');
+      } catch (err) {
+        //
+      }
     }
   };
 

@@ -39,6 +39,7 @@ module.exports = {
         return 'command is not running';
       } else {
         stopCommand(idx);
+        return 'trying to stop command';
       }
     } else {
       return 'no such command to kill';
