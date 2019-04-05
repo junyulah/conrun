@@ -49,15 +49,7 @@ const commandsManager = (sourceCommands, {
   interactive = false,
   windowSize
 } = {}, commandMap) => {
-  const _onlys = onlys.map((item) => item.trim()).filter((item) => item !== '');
-
-  const commands = sourceCommands.filter((command) => {
-    if (_onlys && _onlys.length) {
-      return _onlys.find((only) => new RegExp(only).test(command.name));
-    } else {
-      return true;
-    }
-  }).map((cmd, index) => {
+  const commands = sourceCommands.map((cmd, index) => {
     return {
       name: cmd.name || `conrun-${index}`,
       command: cmd.command,
@@ -168,18 +160,28 @@ const commandsManager = (sourceCommands, {
     }
   };
 
-  const start = () => {
-    const t1 = new Date().getTime();
+  process.on('exit', () => {
+    commands.forEach((_, idx) => {
+      stopCommand(idx);
+    });
+  });
 
-    process.on('exit', () => {
-      commands.forEach((_, idx) => {
-        stopCommand(idx);
-      });
+  const start = () => {
+    const _onlys = onlys.map((item) => item.trim()).filter((item) => item !== '');
+
+    const startCommands = sourceCommands.filter((command) => {
+      if (_onlys && _onlys.length) {
+        return _onlys.find((only) => new RegExp(only).test(command.name));
+      } else {
+        return true;
+      }
     });
 
+    const t1 = new Date().getTime();
+
     return (sequence ?
-      runSequence(commands.map((command, index) => () => runCommand(index))) :
-      Promise.all(commands.map((_, index) => runCommand(index)))
+      runSequence(startCommands.map((command, index) => () => runCommand(index))) :
+      Promise.all(startCommands.map((_, index) => runCommand(index)))
     ).then(() => {
       if (!interactive) {
         const t2 = new Date().getTime();
