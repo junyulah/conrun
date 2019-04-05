@@ -1,0 +1,11 @@
+{
+  "commands": [{
+    "command": ["ping", "google.com"]
+  }, {
+    "command": ["ls"]
+  }],
+  "options": {
+    "windowSize": 10,
+    "interactive": true
+  }
+}

@@ -18,6 +18,9 @@ module.exports = {
     getCommandStatusInfo
   }, idx) => {
     const command = getCommand(Number(idx));
+    if (!command) {
+      return 'no such command to run';
+    }
     if (command.status === 'running') {
       return 'command is running';
     } else {

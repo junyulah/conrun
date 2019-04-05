@@ -1,3 +1,12 @@
+const util = require('util');
+const fs = require('fs');
+const readFile = util.promisify(fs.readFile);
+
+const readJson = async (jsonFilePath) => {
+  const text = await readFile(jsonFilePath, 'utf-8');
+  return JSON.parse(text);
+};
+
 const ESC = '\u001B[';
 
 const retry = (fn, max = 0) => {
@@ -54,5 +63,6 @@ module.exports = {
   moveCursorDown,
   eraseLine,
   eraseLines,
-  runSequence
+  runSequence,
+  readJson
 };

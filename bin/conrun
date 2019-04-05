@@ -1,22 +1,33 @@
 #!/usr/bin/env node
 
 const {runCommands} = require('..');
+const {readJson} = require('../src/util');
+const path = require('path');
 const yargs = require('yargs');
 
 yargs.usage(`Usage: conrun
   --command: "{\\"command\\": [\\"ls\\"], \\"options\\": {}}"
   --only: only run command
   --sequence
+  --config: config file path
   --i: interactive mode
   --ws: log window size
 `);
 
 const {argv} = yargs;
 
-const commands = Array.isArray(argv.command)? argv.command: (argv.command? [argv.command]: []);
-const onlys = Array.isArray(argv.only)? argv.only: (argv.only? [argv.only]: []);
+if(argv.config) {
+  readJson(path.resolve(process.cwd(), argv.config)).then(({commands, options}) => {
+    runCommands(commands, options);
+  }).catch(err => {
+    console.log(err); // eslint-disable-line
+  });
+} else {
+  const commands = Array.isArray(argv.command)? argv.command: (argv.command? [argv.command]: []);
+  const onlys = Array.isArray(argv.only)? argv.only: (argv.only? [argv.only]: []);
 
-runCommands(
-  commands.map((command) => JSON.parse(command)),
-  {onlys, sequence: argv.sequence, interactive: argv.i, windowSize: Number(argv.ws)}
-);
+  runCommands(
+    commands.map((command) => JSON.parse(command)),
+    {onlys, sequence: argv.sequence, interactive: argv.i, windowSize: Number(argv.ws)}
+  );
+}
