@@ -1,6 +1,6 @@
 {
   "name": "conrun",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "concurrent run commands help tool",
   "main": "index.js",
   "scripts": {

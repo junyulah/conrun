@@ -82,9 +82,7 @@ module.exports = ({
     updateLiveLog(text);
 
     printLiveLog(false);
-    if (liveLog.length < windowSize) {
-      printCmdLog();
-    }
+    printCmdLog();
     printTerminalLine();
   };
 
@@ -92,29 +90,35 @@ module.exports = ({
     updateLiveLog(text);
 
     printLiveLog(true);
-    if (liveLog.length < windowSize) {
-      printCmdLog();
-    }
+    printCmdLog();
     printTerminalLine();
   };
+
+  let cmdHistory = [];
+  const MAX_CMD_HISTORY_LENGTH = 100;
+  let cmdIndex = 0;
 
   process.stdin.on('keypress', (str, key) => {
     if (key.ctrl && key.name === 'c') {
       process.exit();
     } else if (key.name === 'return') {
       const cmd = terminalLine.slice(terminalPrefix.length, terminalLine.length).trim();
-
-      terminalLine = terminalPrefix;
-      printTerminalLine();
-      // execute command
-      if (cmd) {
-        Promise.resolve(executeCmd(cmd)).then(text => {
-          logCmdResult(text);
-        });
-      }
+      triggerCmd(cmd);
     } else if (key.name === 'backspace') {
       if (terminalLine.length > terminalPrefix.length) {
         terminalLine = terminalLine.slice(0, terminalLine.length - 1);
+        printTerminalLine();
+      }
+    } else if (key.name === 'up') {
+      if (cmdHistory.length && cmdIndex > 0) {
+        cmdIndex--;
+        terminalLine = terminalPrefix + cmdHistory[cmdIndex];
+        printTerminalLine();
+      }
+    } else if (key.name === 'down') {
+      if (cmdHistory.length && cmdIndex < cmdHistory.length - 1) {
+        cmdIndex++;
+        terminalLine = terminalPrefix + cmdHistory[cmdIndex];
         printTerminalLine();
       }
     } else {
@@ -122,6 +126,24 @@ module.exports = ({
       printTerminalLine();
     }
   });
+
+  const triggerCmd = (cmd) => {
+    terminalLine = terminalPrefix;
+    printTerminalLine();
+    // execute command
+    if (cmd) {
+      if (!cmdHistory.length || cmdHistory[cmdHistory.length - 1] !== cmd) {
+        cmdHistory.push(cmd);
+        if (cmdHistory.length > MAX_CMD_HISTORY_LENGTH) {
+          cmdHistory = cmdHistory.slice(cmdHistory.length - MAX_CMD_HISTORY_LENGTH, cmdHistory.length);
+        }
+      }
+      cmdIndex = cmdHistory.length;
+      Promise.resolve(executeCmd(cmd)).then(text => {
+        logCmdResult(text);
+      });
+    }
+  };
 
   const logCmdResult = (text = '') => {
     updateCmdLog(text);
