@@ -1,26 +1,15 @@
-const {
-  spawn
-} = require('child_process');
+const {spawnCmd}=require('./spawnCmd');
 const {
   commandStatus
 } = require('./statusInfo');
 const chalk = require('chalk');
 const {
   retry,
-  runSequence,
-  appendFile
+  runSequence
 } = require('./util');
 const interactiveCmdMap = require('./interactiveCmdMap');
 const Window = require('./window');
-
-const DefaultIO = () => {
-  return {
-    logStdText: (text) => process.stdout.write(text),
-    logErrText: (text) => process.stderr.write(text)
-  };
-};
-
-const emptyPrefix = '  ';
+const LogIO = require('./logIO');
 
 /**
  * 1. run commands concurrently
@@ -44,14 +33,8 @@ const mergeCmdOptions = (options = {}) => {
   return opts;
 };
 
-const commandsManager = (sourceCommands, {
-  onlys = [],
-  sequence = false,
-  interactive = false,
-  windowSize,
-  logFile
-} = {}, commandMap) => {
-  const commands = sourceCommands.map((cmd, index) => {
+const initialCommands = (sourceCommands) => {
+  return sourceCommands.map((cmd, index) => {
     return {
       name: cmd.name || `conrun-${index}`,
       command: cmd.command,
@@ -63,181 +46,121 @@ const commandsManager = (sourceCommands, {
       pid: null
     };
   });
+};
 
-  const logIO = (interactive ? Window : DefaultIO)({
+const CommandsManager = function(sourceCommands, {
+  onlys = [],
+  sequence = false,
+  interactive = false,
+  windowSize,
+  emptyPrefix = '  ',
+  logFile
+} = {}, commandMap) {
+  this.commands = initialCommands(sourceCommands);
+
+  const {
+    logStdText,
+    logErrText,
+    log
+  } = LogIO(interactive ? Window : null, logFile)({
     windowSize,
     executeCmd: (cmd) => {
       const args = cmd.split(' ').map(item => item.trim()).filter(item => !!item);
       if (commandMap[args[0]]) {
-        return commandMap[args[0]]({
-          getCommand,
-          getCommandStatusInfo,
-          getCommandsStatusInfo,
-          runCommand,
-          stopCommand
-        }, ...args.slice(1));
+        return commandMap[args[0]](this, ...args.slice(1));
       } else {
         return `error: command ${cmd} is not supported.`;
       }
     }
   });
 
-  const logStdText = (text) => {
-    logIO.logStdText(text);
-    if (logFile) {
-      appendFile(logFile, text);
-    }
-  };
-
-  const logErrText = (text) => {
-    logIO.logErrText(text);
-    if (logFile) {
-      appendFile(logFile, text);
-    }
-  };
-
-  const log = (text) => {
-    logStdText(text + '\n');
-  };
-
-  // eg: command = ['echo', '123', '456']
-  const spawnCmd = (command, color, {
-    logStdText,
-    logErrText
-  }) => {
-    const prefix = `[${chalk[color](command.name)}] `;
-
-    command.errMsg = '';
-    command.pid = '';
-
-    return new Promise((resolve, reject) => {
-      const child = spawn(command.command[0], command.command.slice(1), command.options);
-      command.process = child;
-      command.pid = child.pid;
-
-      child.on('error', (err) => {
-        logErrText(chunkToLines(err.toString(), prefix, 'red').join(''));
-        command.errMsg += err.toString();
-        reject(err);
-      });
-
-      child.on('close', (code) => {
-        if (code !== 0) {
-          const errText = `child process exited with code ${code}`;
-          logErrText(chunkToLines(errText, prefix, 'red').join(''));
-
-          reject(new Error(errText));
-        } else {
-          resolve();
-        }
-      });
-
-      child.stdout.on('data', (chunk) => {
-        logStdText(chunkToLines(chunk.toString(), prefix).join(''));
-      });
-
-      child.stderr.on('data', (chunk) => {
-        const errText = chunk.toString();
-        command.errMsg += errText;
-        logErrText(chunkToLines(errText, prefix, 'red').join(''));
-      });
-    });
-  };
-
-  const getCommand = (index) => commands[index];
-
-  const runCommand = (index) => {
-    const command = getCommand(index);
-    command.status = 'running';
-
-    return retry(spawnCmd, command.retry || 0)(command, pickColor(index), {
-      logStdText,
-      logErrText
-    }).then(() => {
-      command.status = 'success';
-    }).catch(() => {
-      command.status = 'fail';
-    });
-  };
-
-  const getCommandStatusInfo = (index) => {
-    return commandStatus(getCommand(index), pickColor(index), index);
-  };
-
-  const getCommandsStatusInfo = () => {
-    return commands.map((_, index) => getCommandStatusInfo(index));
-  };
-
-  const stopCommand = (idx) => {
-    const command = getCommand(idx);
-    if (command.status === 'running') {
-      try {
-        command.process.stdout.destroy();
-        command.process.stderr.destroy();
-        process.kill(command.pid, command.killSignal || 'SIGTERM');
-      } catch (err) {
-        //
-      }
-    }
-  };
+  this.onlys = onlys;
+  this.emptyPrefix = emptyPrefix;
+  this.sequence = sequence;
+  this.log = log;
+  this.logStdText = logStdText;
+  this.logErrText = logErrText;
+  this.interactive = interactive;
 
   process.on('exit', () => {
-    commands.forEach((_, idx) => {
-      stopCommand(idx);
+    this.commands.forEach((_, idx) => {
+      this.stopCommand(idx);
     });
   });
-
-  const start = () => {
-    const _onlys = onlys.map((item) => item.trim()).filter((item) => item !== '');
-
-    const startCommands = sourceCommands.filter((command) => {
-      if (_onlys && _onlys.length) {
-        return _onlys.find((only) => new RegExp(only).test(command.name));
-      } else {
-        return true;
-      }
-    });
-
-    const t1 = new Date().getTime();
-
-    return (sequence ?
-      runSequence(startCommands.map((command, index) => () => runCommand(index))) :
-      Promise.all(startCommands.map((_, index) => runCommand(index)))
-    ).then(() => {
-      if (!interactive) {
-        const t2 = new Date().getTime();
-        log('-------------------------------------------------');
-        log(chalk.blue(`[stats of command results] total time: ${t2 - t1}ms`));
-        log(getCommandsStatusInfo().join('\n'));
-      }
-    });
-  };
-
-  return {
-    start
-  };
 };
 
-const chunkToLines = (chunk, prefix, color) => {
-  const text = chunk.toString();
-  let lines = text.split('\n');
-  if (lines[lines.length - 1] === '') {
-    lines.pop();
+CommandsManager.prototype.getCommand = function(index) {
+  return this.commands[index];
+};
+
+CommandsManager.prototype.getCommands = function() {
+  return this.commands;
+};
+
+// eg: command = ['echo', '123', '456']
+CommandsManager.prototype.runCommand = function(index) {
+  const command = this.getCommand(index);
+  command.status = 'running';
+
+  return retry(spawnCmd, command.retry || 0)(command, pickColor(index), {
+    logStdText: this.logStdText,
+    logErrText: this.logErrText,
+    emptyPrefix: this.emptyPrefix
+  }).then(() => {
+    command.status = 'success';
+  }).catch(() => {
+    command.status = 'fail';
+  });
+};
+
+CommandsManager.prototype.getCommandStatusInfo = function(index) {
+  return commandStatus(this.getCommand(index), pickColor(index), index);
+};
+
+CommandsManager.prototype.getCommandsStatusInfo = function() {
+  return this.commands.map((_, index) => this.getCommandStatusInfo(index));
+};
+
+CommandsManager.prototype.stopCommand = function(idx) {
+  const command = this.getCommand(idx);
+  if (command.status === 'running') {
+    try {
+      command.process.stdout.destroy();
+      command.process.stderr.destroy();
+      process.kill(command.pid, command.killSignal || 'SIGTERM');
+    } catch (err) {
+      //
+    }
   }
-  const firstLine = color === undefined ? `${prefix}${lines[0]}\n` : `${prefix}${chalk[color](lines[0])}\n`;
-
-  return [firstLine].concat(
-    lines.slice(1).map((line) => {
-      if (color !== undefined) {
-        return `${emptyPrefix}${chalk[color](line)}\n`;
-      } else {
-        return `${emptyPrefix}${line}\n`;
-      }
-    })
-  );
 };
 
-const colors = ['blue', 'yellow', 'cyan', 'white', 'magenta', 'gray'];
+CommandsManager.prototype.start = function() {
+  const _onlys = this.onlys.map((item) => item.trim()).filter((item) => item !== '');
+
+  const startCommands = this.commands.filter((command) => {
+    if (_onlys && _onlys.length) {
+      return _onlys.find((only) => new RegExp(only).test(command.name));
+    } else {
+      return true;
+    }
+  });
+
+  const t1 = new Date().getTime();
+
+  return (this.sequence ?
+    runSequence(startCommands.map((command, index) => () => this.runCommand(index))) :
+    Promise.all(startCommands.map((_, index) => this.runCommand(index)))
+  ).then(() => {
+    if (!this.interactive) {
+      const t2 = new Date().getTime();
+      this.log('-------------------------------------------------');
+      this.log(chalk.blue(`[stats of command results] total time: ${t2 - t1}ms`));
+      this.log(this.getCommandsStatusInfo().join('\n'));
+    }
+  });
+};
+
+const colors = ['blue', 'yellow', 'cyan', 'white', 'magenta', 'cyanBright', 'greenBright'];
 
 const pickColor = (index) => {
   return colors[index % colors.length];
@@ -245,7 +168,7 @@ const pickColor = (index) => {
 
 module.exports = {
   runCommands: (commands, options) => {
-    const cm = commandsManager(commands, options, interactiveCmdMap);
+    const cm = new CommandsManager(commands, options, interactiveCmdMap);
     return cm.start();
   }
 };

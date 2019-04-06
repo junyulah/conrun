@@ -1,4 +1,5 @@
 const util = require('util');
+const chalk = require('chalk');
 const fs = require('fs');
 const readFile = util.promisify(fs.readFile);
 const appendFile = util.promisify(fs.appendFile);
@@ -58,6 +59,25 @@ const runSequence = (fns) => {
   }, Promise.resolve([]));
 };
 
+const chunkToLines = (chunk, emptyPrefix, prefix, color) => {
+  const text = chunk.toString();
+  let lines = text.split('\n');
+  if (lines[lines.length - 1] === '') {
+    lines.pop();
+  }
+  const firstLine = color === undefined ? `${prefix}${lines[0]}\n` : `${prefix}${chalk[color](lines[0])}\n`;
+
+  return [firstLine].concat(
+    lines.slice(1).map((line) => {
+      if (color !== undefined) {
+        return `${emptyPrefix}${chalk[color](line)}\n`;
+      } else {
+        return `${emptyPrefix}${line}\n`;
+      }
+    })
+  );
+};
+
 module.exports = {
   retry,
   moveCursorUp,
@@ -66,5 +86,6 @@ module.exports = {
   eraseLines,
   runSequence,
   readJson,
-  appendFile
+  appendFile,
+  chunkToLines
 };
