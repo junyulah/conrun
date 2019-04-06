@@ -7,7 +7,8 @@ const {
 const chalk = require('chalk');
 const {
   retry,
-  runSequence
+  runSequence,
+  appendFile
 } = require('./util');
 const interactiveCmdMap = require('./interactiveCmdMap');
 const Window = require('./window');
@@ -47,7 +48,8 @@ const commandsManager = (sourceCommands, {
   onlys = [],
   sequence = false,
   interactive = false,
-  windowSize
+  windowSize,
+  logFile
 } = {}, commandMap) => {
   const commands = sourceCommands.map((cmd, index) => {
     return {
@@ -62,10 +64,7 @@ const commandsManager = (sourceCommands, {
     };
   });
 
-  const {
-    logStdText,
-    logErrText
-  } = (interactive ? Window : DefaultIO)({
+  const logIO = (interactive ? Window : DefaultIO)({
     windowSize,
     executeCmd: (cmd) => {
       const args = cmd.split(' ').map(item => item.trim()).filter(item => !!item);
@@ -82,6 +81,20 @@ const commandsManager = (sourceCommands, {
       }
     }
   });
+
+  const logStdText = (text) => {
+    logIO.logStdText(text);
+    if (logFile) {
+      appendFile(logFile, text);
+    }
+  };
+
+  const logErrText = (text) => {
+    logIO.logErrText(text);
+    if (logFile) {
+      appendFile(logFile, text);
+    }
+  };
 
   const log = (text) => {
     logStdText(text + '\n');

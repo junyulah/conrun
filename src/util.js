@@ -1,6 +1,7 @@
 const util = require('util');
 const fs = require('fs');
 const readFile = util.promisify(fs.readFile);
+const appendFile = util.promisify(fs.appendFile);
 
 const readJson = async (jsonFilePath) => {
   const text = await readFile(jsonFilePath, 'utf-8');
@@ -64,5 +65,6 @@ module.exports = {
   eraseLine,
   eraseLines,
   runSequence,
-  readJson
+  readJson,
+  appendFile
 };

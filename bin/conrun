@@ -12,22 +12,47 @@ yargs.usage(`Usage: conrun
   --config: config file path
   --i: interactive mode
   --ws: log window size
+  --logFile: log file
 `);
 
 const {argv} = yargs;
 
-if(argv.config) {
-  readJson(path.resolve(process.cwd(), argv.config)).then(({commands, options}) => {
-    runCommands(commands, options);
-  }).catch(err => {
-    console.log(err); // eslint-disable-line
-  });
-} else {
+const parseArgs = () => {
   const commands = Array.isArray(argv.command)? argv.command: (argv.command? [argv.command]: []);
-  const onlys = Array.isArray(argv.only)? argv.only: (argv.only? [argv.only]: []);
+  const onlys = Array.isArray(argv.only)? argv.only: (argv.only? [argv.only]: undefined);
 
-  runCommands(
-    commands.map((command) => JSON.parse(command)),
-    {onlys, sequence: argv.sequence, interactive: argv.i, windowSize: Number(argv.ws)}
-  );
-}
+  return {
+    commands: commands.map((command) => JSON.parse(command)),
+    options: {
+      onlys,
+      sequence: argv.sequence,
+      interactive: argv.i,
+      windowSize: argv.ws,
+      logFile: argv.log
+    }
+  };
+};
+
+const readConfigFile = () => readJson(path.resolve(process.cwd(), argv.config)).then(({commands = [], options = {}}) => {
+  const argConf = parseArgs();
+
+  const logConf = argConf.logFile || options.logFile;
+
+  return {commands: commands.concat(argConf.commands), options: {
+    onlys: argConf.onlys || options.onlys || [],
+    sequence: argConf.sequence === undefined? options.sequence: argConf.sequence,
+    interactive: argConf.interactive === undefined? options.interactive: argConf.interactive,
+    windowSize: Number(argConf.windowSize === undefined? options.windowSize: argConf.windowSize),
+    logFile: !logConf ? undefined: path.resolve(process.cwd(), logConf)
+  }};
+});
+
+const getConf = () => {
+  return argv.config? readConfigFile(): Promise.resolve(parseArgs());
+};
+
+getConf().then(({commands, options}) => {
+  runCommands(commands, options);
+}).catch(err => {
+  console.log(err); // eslint-disable-line
+});
