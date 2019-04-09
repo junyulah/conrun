@@ -1,4 +1,6 @@
-const {spawnCmd}=require('./spawnCmd');
+const {
+  spawnCmd
+} = require('./spawnCmd');
 const {
   commandStatus
 } = require('./statusInfo');
@@ -136,8 +138,10 @@ CommandsManager.prototype.stopCommand = function(idx) {
 
 CommandsManager.prototype.start = function() {
   const _onlys = this.onlys.map((item) => item.trim()).filter((item) => item !== '');
-
-  const startCommands = this.commands.filter((command) => {
+  const startCommandIdxs = this.commands.map((_, idx) => {
+    return idx;
+  }).filter((idx) => {
+    const command = this.getCommand(idx);
     if (_onlys && _onlys.length) {
       return _onlys.find((only) => new RegExp(only).test(command.name));
     } else {
@@ -148,8 +152,8 @@ CommandsManager.prototype.start = function() {
   const t1 = new Date().getTime();
 
   return (this.sequence ?
-    runSequence(startCommands.map((command, index) => () => this.runCommand(index))) :
-    Promise.all(startCommands.map((_, index) => this.runCommand(index)))
+    runSequence(startCommandIdxs.map((index) => () => this.runCommand(index))) :
+    Promise.all(startCommandIdxs.map((index) => this.runCommand(index)))
   ).then(() => {
     if (!this.interactive) {
       const t2 = new Date().getTime();
