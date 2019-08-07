@@ -1,6 +1,6 @@
-const {
-  appendFile
-} = require('./util');
+const fs = require('fs');
+const util = require('util');
+const appendFile = util.promisify(fs.appendFile);
 
 const DefaultIO = () => {
   return {

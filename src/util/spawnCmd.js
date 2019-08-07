@@ -2,9 +2,25 @@ const chalk = require('chalk');
 const {
   spawn
 } = require('child_process');
-const {
-  chunkToLines
-} = require('./util');
+
+const chunkToLines = (chunk, emptyPrefix, prefix, color) => {
+  const text = chunk.toString();
+  let lines = text.split('\n');
+  if (lines[lines.length - 1] === '') {
+    lines.pop();
+  }
+  const firstLine = color === undefined ? `${prefix}${lines[0]}\n` : `${prefix}${chalk[color](lines[0])}\n`;
+
+  return [firstLine].concat(
+    lines.slice(1).map((line) => {
+      if (color !== undefined) {
+        return `${emptyPrefix}${chalk[color](line)}\n`;
+      } else {
+        return `${emptyPrefix}${line}\n`;
+      }
+    })
+  );
+};
 
 // eg: command = ['echo', '123', '456']
 const spawnCmd = (command, color, {
@@ -28,9 +44,9 @@ const spawnCmd = (command, color, {
       reject(err);
     });
 
-    child.on('close', (code) => {
+    child.on('exit', (code, signal) => {
       if (code !== 0) {
-        const errText = `child process exited with code ${code}`;
+        const errText = `child process exited with code ${code}, signal ${signal}.`;
         logErrText(chunkToLines(errText, emptyPrefix, prefix, 'red').join(''));
 
         reject(new Error(errText));

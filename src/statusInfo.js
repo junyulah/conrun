@@ -24,11 +24,14 @@ const commandStatus = ({
 const ERROR_BRIEF_LEN = 60;
 
 const getErrorMsgBrief = (errMsg) => {
-  const text = JSON.stringify(errMsg);
-  if (text.length > ERROR_BRIEF_LEN) {
-    return text.slice(0, ERROR_BRIEF_LEN - 3) + '...';
+  return getBriefText(JSON.stringify(errMsg), ERROR_BRIEF_LEN);
+};
+
+const getBriefText = (text, maxLen) => {
+  if (text.length > maxLen) {
+    return text.slice(0, maxLen - 3) + '...';
   }
-  return text.slice(0, ERROR_BRIEF_LEN);
+  return text.slice(0, maxLen);
 };
 
 module.exports = {
