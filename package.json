@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/idata-shopee/conrun.git"
+    "url": "git+https://github.com/LoveKino/conrun.git"
   },
   "keywords": [
     "concurrent",
@@ -21,15 +21,15 @@
   "author": "ddchen",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/idata-shopee/conrun/issues"
+    "url": "https://github.com/LoveKino/conrun/issues"
   },
-  "homepage": "https://github.com/idata-shopee/conrun#readme",
+  "homepage": "https://github.com/LoveKino/conrun#readme",
   "devDependencies": {
-    "mocha": "^5.2.0"
+    "mocha": "^7.2.0"
   },
   "dependencies": {
     "chalk": "^2.4.2",
     "lodash": "^4.17.15",
-    "yargs": "^12.0.5"
+    "yargs": "^15.3.1"
   }
 }
